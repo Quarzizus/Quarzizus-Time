@@ -1,0 +1,18 @@
+@use 'variables' as *;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+// Example of SCSS usage overriding Tailwind or complementing it
+.metronome-container {
+  // Just ensuring we can use SCSS variables
+  // color: $text-color; 
+}
+
