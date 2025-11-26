@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useMetronomeEngine } from "./hooks/useMetronomeEngine";
 import { usePWAInstall } from "./hooks/usePWAInstall";
 import { BpmControl } from "./components/BpmControl/BpmControl";
@@ -12,6 +13,31 @@ import { Download } from "lucide-react";
 function App() {
   const engine = useMetronomeEngine();
   const { isInstallable, install } = usePWAInstall();
+
+  const [gapError, setGapError] = useState<string | null>(null);
+
+  const hasInvalidGapConfig =
+    engine.gapActive &&
+    (!engine.onBars ||
+      !engine.offBars ||
+      engine.onBars < 1 ||
+      engine.offBars < 1);
+
+  const handlePlay = () => {
+    if (hasInvalidGapConfig) {
+      setGapError(
+        "Configura valores válidos en Gap Trainer antes de reproducir."
+      );
+      return;
+    }
+    engine.start();
+  };
+
+  useEffect(() => {
+    if (!gapError) return;
+    const id = window.setTimeout(() => setGapError(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [gapError]);
 
   return (
     <div className="min-h-screen flex flex-col items-center py-12 bg-background text-foreground transition-colors duration-300">
@@ -70,11 +96,17 @@ function App() {
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10 rounded-full blur-xl"></div>
           <Transport
             isRunning={engine.isRunning}
-            onPlay={engine.start}
+            onPlay={handlePlay}
             onStop={engine.stop}
             onReset={engine.reset}
           />
         </div>
+
+        {gapError && (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs shadow-lg">
+            {gapError}
+          </div>
+        )}
       </main>
     </div>
   );

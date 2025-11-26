@@ -7,8 +7,8 @@ export interface MetronomeState {
   bpm: number;
   beatsPerBar: number;
   subdivision: number; // 1 = quarter, 2 = eighth, 3 = triplet
-  onBars: number;
-  offBars: number;
+  onBars: number | null;
+  offBars: number | null;
   gapActive: boolean;
   isRunning: boolean;
 }
@@ -17,8 +17,8 @@ export function useMetronomeEngine() {
   const [bpm, setBpm] = useState(120);
   const [beatsPerBar, setBeatsPerBar] = useState(4);
   const [subdivision, setSubdivision] = useState(1);
-  const [onBars, setOnBars] = useState(4);
-  const [offBars, setOffBars] = useState(2);
+  const [onBars, setOnBars] = useState<number | null>(4);
+  const [offBars, setOffBars] = useState<number | null>(2);
   const [gapActive, setGapActive] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -45,20 +45,23 @@ export function useMetronomeEngine() {
 
   // Persistence (Load)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("metronome-settings");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.bpm) setBpm(parsed.bpm);
-        if (parsed.beatsPerBar) setBeatsPerBar(parsed.beatsPerBar);
-        if (parsed.subdivision) setSubdivision(parsed.subdivision);
-        if (parsed.onBars) setOnBars(parsed.onBars);
-        if (parsed.offBars) setOffBars(parsed.offBars);
-        if (parsed.gapActive !== undefined) setGapActive(parsed.gapActive);
+    const id = window.setTimeout(() => {
+      try {
+        const saved = localStorage.getItem("metronome-settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.bpm) setBpm(parsed.bpm);
+          if (parsed.beatsPerBar) setBeatsPerBar(parsed.beatsPerBar);
+          if (parsed.subdivision) setSubdivision(parsed.subdivision);
+          if (parsed.onBars !== undefined) setOnBars(parsed.onBars);
+          if (parsed.offBars !== undefined) setOffBars(parsed.offBars);
+          if (parsed.gapActive !== undefined) setGapActive(parsed.gapActive);
+        }
+      } catch (e) {
+        console.warn("Failed to load metronome settings", e);
       }
-    } catch (e) {
-      console.warn("Failed to load metronome settings", e);
-    }
+    }, 0);
+    return () => window.clearTimeout(id);
   }, []);
 
   // Persistence (Save)
@@ -181,7 +184,9 @@ export function useMetronomeEngine() {
 
         // Gap Logic
         let inGap = false;
-        if (gapActive) {
+        const hasValidGapValues =
+          onBars !== null && offBars !== null && onBars >= 1 && offBars >= 1;
+        if (gapActive && hasValidGapValues) {
           const cycle = onBars + offBars;
           const cyclePos = currentBarRef.current % cycle;
           if (cyclePos >= onBars) inGap = true;
@@ -256,6 +261,25 @@ export function useMetronomeEngine() {
     setIsGap(false);
     visualQueueRef.current = [];
   };
+
+  // If gap is active but the config is invalid (null or < 1), stop and reset.
+  useEffect(() => {
+    const hasValidGapValues =
+      onBars !== null && offBars !== null && onBars >= 1 && offBars >= 1;
+
+    if (gapActive && !hasValidGapValues && isRunning) {
+      // Defer state updates out of the current render flush.
+      const id = window.setTimeout(() => {
+        setIsRunning(false);
+        currentBeatRef.current = 0;
+        currentBarRef.current = 0;
+        setCurrentBeat(0);
+        setIsGap(false);
+        visualQueueRef.current = [];
+      }, 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [onBars, offBars, gapActive, isRunning]);
 
   const tapTempo = () => {
     const now = Date.now();

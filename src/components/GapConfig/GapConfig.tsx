@@ -1,9 +1,11 @@
+import type { ChangeEvent } from "react";
+
 interface GapConfigProps {
-  onBars: number;
-  offBars: number;
+  onBars: number | null;
+  offBars: number | null;
   gapActive: boolean;
-  setOnBars: (n: number) => void;
-  setOffBars: (n: number) => void;
+  setOnBars: (n: number | null) => void;
+  setOffBars: (n: number | null) => void;
   setGapActive: (active: boolean) => void;
 }
 
@@ -15,6 +17,25 @@ export function GapConfig({
   setOffBars,
   setGapActive,
 }: GapConfigProps) {
+  const handleOnBarsChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setOnBars(null);
+      return;
+    }
+    const parsed = Number(value);
+    setOnBars(Number.isNaN(parsed) ? null : parsed);
+  };
+
+  const handleOffBarsChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === "") {
+      setOffBars(null);
+      return;
+    }
+    const parsed = Number(value);
+    setOffBars(Number.isNaN(parsed) ? null : parsed);
+  };
   return (
     <div className="flex flex-col gap-4 p-4 border rounded-xl bg-card shadow-sm w-full">
       <div
@@ -48,9 +69,9 @@ export function GapConfig({
           </span>
           <input
             type="number"
-            min="1"
-            value={onBars}
-            onChange={(e) => setOnBars(Math.max(1, Number(e.target.value)))}
+            min={1}
+            value={onBars ?? ""}
+            onChange={(e) => handleOnBarsChange(e)}
             className="w-full p-2 rounded-md border bg-background focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
           />
         </div>
@@ -60,9 +81,9 @@ export function GapConfig({
           </span>
           <input
             type="number"
-            min="1"
-            value={offBars}
-            onChange={(e) => setOffBars(Math.max(1, Number(e.target.value)))}
+            min={1}
+            value={offBars ?? ""}
+            onChange={(e) => handleOffBarsChange(e)}
             className="w-full p-2 rounded-md border bg-background focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
           />
         </div>
