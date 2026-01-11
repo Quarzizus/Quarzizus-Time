@@ -4,18 +4,18 @@ interface VisualizerProps {
   measure: number;
   subdivision: number;
   currentBeat?: number;
-  // isGap: boolean;
+  isGap: boolean;
 }
 
 export function Visualizer({
   measure,
   subdivision,
   currentBeat = 0,
-  // isGap,
+  isGap,
 }: VisualizerProps) {
   // Total ticks per bar
   const totalTicks = measure * subdivision;
-  // console.log(currentBeat);
+
   return (
     <div className="flex flex-col items-center gap-4 p-6 bg-secondary/20 rounded-xl w-full shadow-inner">
       <div className="flex items-center justify-between w-full px-4 text-sm font-mono font-bold tracking-wider text-muted-foreground">
@@ -26,7 +26,7 @@ export function Visualizer({
             className="w-full h-full object-contain"
           />
         </picture>
-        {/*<span
+        <span
           className={`px-2 py-0.5 rounded ${
             isGap
               ? "bg-destructive/10 text-destructive"
@@ -34,7 +34,7 @@ export function Visualizer({
           }`}
         >
           {isGap ? "MUTE" : "ON"}
-        </span>*/}
+        </span>
       </div>
 
       <div className="flex gap-3 justify-center flex-wrap py-4">
@@ -57,10 +57,7 @@ export function Visualizer({
                       ? "bg-muted-foreground/20"
                       : "bg-muted-foreground/10"
                 }
-                ${
-                  // isGap ? "opacity-20" : "opacity-100"
-                  "opacity-100"
-                }
+                ${isGap ? "opacity-20" : "opacity-100"}
               `}
             />
           );

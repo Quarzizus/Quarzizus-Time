@@ -1,28 +1,38 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMetronomeAudio } from "./useMetronomeAudio";
-import { useMetronomeWorker } from "./useMetronomeWorker";
+import {
+  useMetronomeWorker,
+  type MetronomeConfig,
+  type TickData,
+} from "./useMetronomeWorker";
 
-interface Props {
-  bpm: number;
-  measure: number;
-  subdivision: number;
-}
-
-const useEngine = ({ bpm, measure, subdivision }: Props) => {
+const useEngine = (config: MetronomeConfig) => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [isGap, setIsGap] = useState<boolean>(false);
   const [currentBeat, setCurrentBeat] = useState<number>(0);
+  const [currentMeasure, setCurrentMeasure] = useState<number>(1);
 
   const { playSound } = useMetronomeAudio();
   const { start, stop, update, onTick } = useMetronomeWorker();
 
-  const prevBpm = useRef(bpm);
-  const prevMeasure = useRef(measure);
-  const prevSubdivision = useRef(subdivision);
+  const prevConfig = useRef<MetronomeConfig>(config);
 
   const handleTick = useCallback(
-    (beat: number, soundType: "accent" | "sub") => {
-      playSound(soundType, beat);
-      setCurrentBeat(beat);
+    (data: TickData) => {
+      const shouldPlay =
+        !data.gapEnabled ||
+        data.measureCount % (data.measuresOn + data.measuresOff) <
+          data.measuresOn;
+
+      if (shouldPlay) {
+        playSound(data.soundType, data.beat);
+        setIsGap(false);
+      } else {
+        setIsGap(true);
+      }
+
+      setCurrentBeat(data.beat);
+      setCurrentMeasure(data.measureCount);
     },
     [playSound],
   );
@@ -33,22 +43,23 @@ const useEngine = ({ bpm, measure, subdivision }: Props) => {
 
   useEffect(() => {
     const hasUpdates =
-      bpm !== prevBpm.current ||
-      measure !== prevMeasure.current ||
-      subdivision !== prevSubdivision.current;
+      config.bpm !== prevConfig.current.bpm ||
+      config.measure !== prevConfig.current.measure ||
+      config.subdivision !== prevConfig.current.subdivision ||
+      config.measuresOn !== prevConfig.current.measuresOn ||
+      config.measuresOff !== prevConfig.current.measuresOff ||
+      config.gapEnabled !== prevConfig.current.gapEnabled;
 
     if (hasUpdates) {
-      update(bpm, measure, subdivision);
-      prevBpm.current = bpm;
-      prevMeasure.current = measure;
-      prevSubdivision.current = subdivision;
+      update(config);
+      prevConfig.current = config;
     }
-  }, [bpm, measure, subdivision, update]);
+  }, [config, update]);
 
   const onPlay = useCallback(() => {
-    start(bpm, measure, subdivision);
+    start(config);
     setIsRunning(true);
-  }, [bpm, measure, subdivision, start]);
+  }, [config, start]);
 
   const onStop = useCallback(() => {
     stop();
@@ -59,11 +70,15 @@ const useEngine = ({ bpm, measure, subdivision }: Props) => {
     stop();
     setIsRunning(false);
     setCurrentBeat(0);
+    setCurrentMeasure(1);
+    setIsGap(false);
   }, [stop]);
 
   return {
     currentBeat,
+    currentMeasure,
     isRunning,
+    isGap,
     onPlay,
     onStop,
     onReset,

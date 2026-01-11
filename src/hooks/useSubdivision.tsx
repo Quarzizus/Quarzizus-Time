@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const useSubdivision = () => {
-  const [subdivision, setSubdivision] = useState<number>(4);
+  const [subdivision, setSubdivision] = useState<number>(1);
 
   const options = [
     {

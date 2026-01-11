@@ -10,16 +10,24 @@ import { useSubdivision } from "./hooks/useSubdivision";
 import { useEngine } from "./hooks/useEngine";
 import { Transport } from "./components/PlayerControls/Transport";
 import { GapConfig } from "./components/GapConfig/GapConfig";
+import { useGap } from "./hooks/useGap";
+import { Download } from "lucide-react";
+import { usePWAInstall } from "./hooksOld/usePWAInstall";
 
 function App() {
+  const { install, isInstallable } = usePWAInstall();
   const { bpm, handleBpmChange } = useBpm();
   const { tapTempo } = useTapTempo(handleBpmChange);
   const measureConfig = useMesure();
   const subdivisionConfig = useSubdivision();
+  const gapConfig = useGap();
   const engine = useEngine({
     bpm,
     measure: measureConfig.measure,
     subdivision: subdivisionConfig.subdivision,
+    gapEnabled: gapConfig.gapEnabled,
+    measuresOff: gapConfig.measuresOff,
+    measuresOn: gapConfig.measuresOn,
   });
 
   return (
@@ -32,7 +40,7 @@ function App() {
           <p className="text-muted-foreground text-sm font-medium">
             Metrónomo profesional
           </p>
-          {/*{isInstallable && (
+          {isInstallable && (
             <button
               onClick={install}
               className="absolute top-0 right-0 p-2 text-muted-foreground hover:text-primary transition-colors"
@@ -40,13 +48,14 @@ function App() {
             >
               <Download className="w-5 h-5" />
             </button>
-          )}*/}
+          )}
         </header>
 
         <Visualizer
           measure={measureConfig.measure}
           subdivision={subdivisionConfig.subdivision}
           currentBeat={engine.currentBeat}
+          isGap={engine.isGap}
         />
 
         <div className="flex flex-col gap-4">
@@ -59,18 +68,12 @@ function App() {
           <SubdivisionSelector {...subdivisionConfig} />
         </div>
 
-        <GapConfig />
+        <GapConfig {...gapConfig} />
 
         <div className="sticky bottom-6 mt-2 pb-6">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10 rounded-full blur-xl"></div>
           <Transport {...engine} />
         </div>
-
-        {/*gapError && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs shadow-lg">
-            {gapError}
-          </div>
-        )*/}
       </main>
     </div>
   );

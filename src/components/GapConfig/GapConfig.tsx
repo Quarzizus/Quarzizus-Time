@@ -1,32 +1,40 @@
-// import type { ChangeEvent } from "react";
+interface Props {
+  handleGap: () => void;
+  handleOff: (value: number) => void;
+  handleOn: (value: number) => void;
+  gapEnabled: boolean;
+  measuresOn: number;
+  measuresOff: number;
+}
 
-// interface GapConfigProps {
-//   onBars: number | null;
-//   offBars: number | null;
-//   gapActive: boolean;
-//   setOnBars: (n: number | null) => void;
-//   setOffBars: (n: number | null) => void;
-//   setGapActive: (active: boolean) => void;
-// }
+const ON_OPTIONS = [1, 2, 3, 4];
+const OFF_OPTIONS = [1, 2, 3, 4];
 
-export function GapConfig() {
+export function GapConfig({
+  handleGap,
+  handleOff,
+  handleOn,
+  gapEnabled,
+  measuresOn,
+  measuresOff,
+}: Props) {
   return (
     <div className="flex flex-col gap-4 p-4 border rounded-xl bg-card shadow-sm w-full">
       <div
         className="flex items-center justify-between cursor-pointer"
-        onClick={() => {}}
+        onClick={handleGap}
       >
         <label className="text-sm font-medium uppercase tracking-wider cursor-pointer">
           Gap Trainer
         </label>
         <div
           className={`w-11 h-6 rounded-full p-1 transition-colors ${
-            window ? "bg-primary" : "bg-muted"
+            gapEnabled ? "bg-primary" : "bg-muted"
           }`}
         >
           <div
             className={`w-4 h-4 bg-background rounded-full shadow-sm transform transition-transform duration-200 ${
-              window ? "translate-x-5" : ""
+              gapEnabled ? "translate-x-5" : ""
             }`}
           />
         </div>
@@ -34,37 +42,50 @@ export function GapConfig() {
 
       <div
         className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${
-          window ? "opacity-100" : "opacity-50 pointer-events-none"
+          gapEnabled ? "opacity-100" : "opacity-50 pointer-events-none"
         }`}
       >
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <span className="text-xs text-muted-foreground font-medium">
             PLAY (COMPASES)
           </span>
-          <input
-            type="number"
-            min={1}
-            value={1}
-            onChange={() => {}}
-            className="w-full p-2 rounded-md border bg-background focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-          />
+          <div className="flex rounded-md overflow-hidden border bg-card">
+            {ON_OPTIONS.map((value) => (
+              <button
+                key={value}
+                onClick={() => handleOn(value)}
+                className={`flex-1 px-2 py-2 text-sm font-medium transition-colors ${
+                  measuresOn === value
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-secondary"
+                }`}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <span className="text-xs text-muted-foreground font-medium">
             MUTE (COMPASES)
           </span>
-          <input
-            type="number"
-            min={1}
-            value={1}
-            onChange={() => {}}
-            className="w-full p-2 rounded-md border bg-background focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-          />
+          <div className="flex rounded-md overflow-hidden border bg-card">
+            {OFF_OPTIONS.map((value) => (
+              <button
+                key={value}
+                onClick={() => handleOff(value)}
+                className={`flex-1 px-2 py-2 text-sm font-medium transition-colors ${
+                  measuresOff === value
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-secondary"
+                }`}
+              >
+                {value}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-      <button className="px-4 py-2 rounded-md  transition-colors text-sm border hover:bg-secondary">
-        Aplicar
-      </button>
     </div>
   );
 }
