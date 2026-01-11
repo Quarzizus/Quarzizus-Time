@@ -46,8 +46,7 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
     source.buffer = buffer;
 
     const gain = ctx.createGain();
-    // Ajustar volumen: accent más fuerte, sub más suave
-    gain.gain.value = type === "accent" ? 0.8 : 0.8;
+    gain.gain.value = type === "accent" ? 0.8 : 0.3;
 
     source.connect(gain);
     gain.connect(ctx.destination);

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useMetronomeAudio } from "./useMetronomeAudio";
+import { useMetronomeWorker } from "./useMetronomeWorker";
 
 interface Props {
   bpm: number;
@@ -11,74 +12,54 @@ const useEngine = ({ bpm, measure, subdivision }: Props) => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [currentBeat, setCurrentBeat] = useState<number>(0);
 
-  const stateRef = useRef({
-    bpm,
-    measure,
-    subdivision,
-    beat: 0,
-    nextTick: 0,
-  });
-
   const { playSound } = useMetronomeAudio();
+  const { start, stop, update, onTick } = useMetronomeWorker();
+
+  const prevBpm = useRef(bpm);
+  const prevMeasure = useRef(measure);
+  const prevSubdivision = useRef(subdivision);
+
+  const handleTick = useCallback(
+    (beat: number, soundType: "accent" | "sub") => {
+      playSound(soundType, beat);
+      setCurrentBeat(beat);
+    },
+    [playSound],
+  );
 
   useEffect(() => {
-    stateRef.current.bpm = bpm;
-    stateRef.current.measure = measure;
-    stateRef.current.subdivision = subdivision;
-  }, [bpm, measure, subdivision]);
+    onTick(handleTick);
+  }, [onTick, handleTick]);
 
   useEffect(() => {
-    if (!isRunning) return;
+    const hasUpdates =
+      bpm !== prevBpm.current ||
+      measure !== prevMeasure.current ||
+      subdivision !== prevSubdivision.current;
 
-    let rafId: number;
-    const { bpm, subdivision } = stateRef.current;
-    const interval = 60000 / bpm / subdivision;
-    stateRef.current.nextTick = performance.now() + interval;
+    if (hasUpdates) {
+      update(bpm, measure, subdivision);
+      prevBpm.current = bpm;
+      prevMeasure.current = measure;
+      prevSubdivision.current = subdivision;
+    }
+  }, [bpm, measure, subdivision, update]);
 
-    const loop = () => {
-      const { bpm, measure, subdivision, nextTick } = stateRef.current;
-      const interval = 60000 / bpm / subdivision;
-      const now = performance.now();
-
-      if (now >= nextTick) {
-        let nextBeat = stateRef.current.beat + 1;
-        const totalTicks = measure * subdivision;
-        if (nextBeat >= totalTicks) {
-          nextBeat = 0;
-        }
-
-        const isAccent = nextBeat === 0 || nextBeat % subdivision === 0;
-
-        const soundType: "accent" | "sub" = isAccent ? "accent" : "sub";
-
-        playSound(soundType, nextBeat);
-
-        stateRef.current.beat = nextBeat;
-        stateRef.current.nextTick += interval;
-        setCurrentBeat(nextBeat);
-      }
-
-      rafId = requestAnimationFrame(loop);
-    };
-
-    rafId = requestAnimationFrame(loop);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-    };
-  }, [isRunning, playSound]);
-
-  const onPlay = () => {
+  const onPlay = useCallback(() => {
+    start(bpm, measure, subdivision);
     setIsRunning(true);
-  };
+  }, [bpm, measure, subdivision, start]);
 
-  const onStop = () => setIsRunning(false);
+  const onStop = useCallback(() => {
+    stop();
+    setIsRunning(false);
+  }, [stop]);
 
-  const onReset = () => {
+  const onReset = useCallback(() => {
+    stop();
     setIsRunning(false);
     setCurrentBeat(0);
-    stateRef.current.beat = 0;
-  };
+  }, [stop]);
 
   return {
     currentBeat,
