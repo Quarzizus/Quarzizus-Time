@@ -1,44 +1,85 @@
-import { useState, useEffect } from "react";
-import { useMetronomeEngine } from "./hooks/useMetronomeEngine";
-import { usePWAInstall } from "./hooks/usePWAInstall";
+// import { useState, useEffect } from "react";
+// import { useMetronomeEngine } from "./hooks/useMetronomeEngine";
+// import { usePWAInstall } from "./hooks/usePWAInstall";
 import { BpmControl } from "./components/BpmControl/BpmControl";
-import { Transport } from "./components/PlayerControls/Transport";
+import { MeasureSelector } from "./components/MeasureSelector/MeasureSelector";
 import { TapTempoButton } from "./components/PlayerControls/TapTempoButton";
-import { Visualizer } from "./components/Visualizer/Visualizer";
-import { TimeSignatureSelector } from "./components/TimeSignatureSelector/TimeSignatureSelector";
 import { SubdivisionSelector } from "./components/SubdivisionSelector/SubdivisionSelector";
-import { GapConfig } from "./components/GapConfig/GapConfig";
-import { Download } from "lucide-react";
+import { Visualizer } from "./components/Visualizer/Visualizer";
+import { useBpm } from "./hooks/useBpm";
+import { useTapTempo } from "./hooks/useTapTempo";
+import { useMesure } from "./hooks/useMeasure";
+import { useSubdivision } from "./hooks/useSubdivision";
+import { useEngine } from "./hooks/useEngine";
+import { Transport } from "./components/PlayerControls/Transport";
+// import { Transport } from "./components/PlayerControls/Transport";
+// import { TapTempoButton } from "./components/PlayerControls/TapTempoButton";
+// import { Visualizer } from "./components/Visualizer/Visualizer";
+// import { TimeSignatureSelector } from "./components/TimeSignatureSelector/TimeSignatureSelector";
+// import { SubdivisionSelector } from "./components/SubdivisionSelector/SubdivisionSelector";
+// import { GapConfig } from "./components/GapConfig/GapConfig";
+// import { Download } from "lucide-react";
 
 function App() {
-  const engine = useMetronomeEngine();
-  const { isInstallable, install } = usePWAInstall();
+  const { bpm, handleBpmChange } = useBpm();
+  const { tapTempo } = useTapTempo(handleBpmChange);
+  const measureConfig = useMesure();
+  const subdivisionConfig = useSubdivision();
+  const engine = useEngine({
+    bpm,
+    measure: measureConfig.measure,
+    subdivision: subdivisionConfig.subdivision,
+  });
 
-  const [gapError, setGapError] = useState<string | null>(null);
+  // const engine = useMetronomeEngine();
+  // const { isInstallable, install } = usePWAInstall();
 
-  const hasInvalidGapConfig =
-    engine.gapActive &&
-    (!engine.onBars ||
-      !engine.offBars ||
-      engine.onBars < 1 ||
-      engine.offBars < 1);
+  // const [gapError, setGapError] = useState<string | null>(null);
 
-  const handlePlay = () => {
-    if (hasInvalidGapConfig) {
-      setGapError(
-        "Configura valores válidos en Gap Trainer antes de reproducir."
-      );
-      return;
-    }
-    engine.start();
-  };
+  // const hasInvalidGapConfig =
+  //   engine.gapActive &&
+  //   (!engine.onBars ||
+  //     !engine.offBars ||
+  //     engine.onBars < 1 ||
+  //     engine.offBars < 1);
 
-  useEffect(() => {
-    if (!gapError) return;
-    const id = window.setTimeout(() => setGapError(null), 2500);
-    return () => window.clearTimeout(id);
-  }, [gapError]);
+  // const handlePlay = () => {
+  //   if (hasInvalidGapConfig) {
+  //     setGapError(
+  //       "Configura valores válidos en Gap Trainer antes de reproducir."
+  //     );
+  //     return;
+  //   }
+  //   engine.start();
+  // };
 
+  // useEffect(() => {
+  //   if (!gapError) return;
+  //   const id = window.setTimeout(() => setGapError(null), 2500);
+  //   return () => window.clearTimeout(id);
+  // }, [gapError]);
+
+  // const engine = {
+  //   bpm: 120,
+  //   setBpm: () => {},
+  //   beatsPerBar: 4,
+  //   setBeatsPerBar: () => {},
+  //   subdivision: 1,
+  //   setSubdivision: () => {},
+  //   onBars: 4,
+  //   setOnBars: () => {},
+  //   offBars: 2,
+  //   setOffBars: () => {},
+  //   gapActive: false,
+  //   setGapActive: () => {},
+  //   isRunning: false,
+  //   start: () => {},
+  //   stop: () => {},
+  //   reset: () => {},
+  //   tapTempo: () => {},
+  //   currentBeat: 0,
+  //   isGap: false,
+  // };
   return (
     <div className="min-h-screen flex flex-col items-center py-12 bg-background text-foreground transition-colors duration-300">
       <main className="max-w-md w-full flex flex-col gap-6 px-4">
@@ -49,7 +90,7 @@ function App() {
           <p className="text-muted-foreground text-sm font-medium">
             Metrónomo profesional
           </p>
-          {isInstallable && (
+          {/*{isInstallable && (
             <button
               onClick={install}
               className="absolute top-0 right-0 p-2 text-muted-foreground hover:text-primary transition-colors"
@@ -57,56 +98,50 @@ function App() {
             >
               <Download className="w-5 h-5" />
             </button>
-          )}
+          )}*/}
         </header>
 
         <Visualizer
-          beatsPerBar={engine.beatsPerBar}
-          subdivision={engine.subdivision}
+          measure={measureConfig.measure}
+          subdivision={subdivisionConfig.subdivision}
           currentBeat={engine.currentBeat}
-          isGap={engine.isGap}
         />
 
         <div className="flex flex-col gap-4">
-          <BpmControl bpm={engine.bpm} setBpm={engine.setBpm} />
-          <TapTempoButton onTap={engine.tapTempo} />
+          <BpmControl bpm={bpm} handler={handleBpmChange} />
+          <TapTempoButton onTap={tapTempo} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <TimeSignatureSelector
-            beatsPerBar={engine.beatsPerBar}
-            setBeatsPerBar={engine.setBeatsPerBar}
-          />
-          <SubdivisionSelector
-            subdivision={engine.subdivision}
-            setSubdivision={engine.setSubdivision}
-          />
+          <MeasureSelector {...measureConfig} />
+          <SubdivisionSelector {...subdivisionConfig} />
         </div>
 
-        <GapConfig
+        {/*<GapConfig
           onBars={engine.onBars}
           offBars={engine.offBars}
           gapActive={engine.gapActive}
           setOnBars={engine.setOnBars}
           setOffBars={engine.setOffBars}
           setGapActive={engine.setGapActive}
-        />
+        />*/}
 
         <div className="sticky bottom-6 mt-2 pb-6">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10 rounded-full blur-xl"></div>
           <Transport
-            isRunning={engine.isRunning}
-            onPlay={handlePlay}
-            onStop={engine.stop}
-            onReset={engine.reset}
+            {...engine}
+
+            // onPlay={engine.start}
+            // onStop={engine.stop}
+            // onReset={engine.reset}
           />
         </div>
 
-        {gapError && (
+        {/*gapError && (
           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs shadow-lg">
             {gapError}
           </div>
-        )}
+        )*/}
       </main>
     </div>
   );
