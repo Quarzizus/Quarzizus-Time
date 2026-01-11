@@ -47,11 +47,9 @@ const useEngine = ({ bpm, measure, subdivision }: Props) => {
           nextBeat = 0;
         }
 
-        const isFirstBeatOfMeasure =
-          nextBeat === 0 || nextBeat % subdivision === 0;
-        const soundType: "accent" | "sub" = isFirstBeatOfMeasure
-          ? "accent"
-          : "sub";
+        const isAccent = nextBeat === 0 || nextBeat % subdivision === 0;
+
+        const soundType: "accent" | "sub" = isAccent ? "accent" : "sub";
 
         playSound(soundType, nextBeat);
 

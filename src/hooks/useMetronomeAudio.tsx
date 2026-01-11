@@ -18,8 +18,8 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
     const initAudio = () => {
       const ctx = AudioContextManager.getContext();
       audioContextRef.current = ctx;
-      accentBufferRef.current = createClickBuffer(ctx, 1200, 0.05);
-      subBufferRef.current = createClickBuffer(ctx, 800, 0.05);
+      accentBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
+      subBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
     };
     initAudio();
   }, []);
@@ -47,7 +47,7 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
 
     const gain = ctx.createGain();
     // Ajustar volumen: accent más fuerte, sub más suave
-    gain.gain.value = type === "accent" ? 0.8 : 0.6;
+    gain.gain.value = type === "accent" ? 0.8 : 0.8;
 
     source.connect(gain);
     gain.connect(ctx.destination);
