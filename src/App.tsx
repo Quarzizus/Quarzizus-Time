@@ -1,6 +1,3 @@
-// import { useState, useEffect } from "react";
-// import { useMetronomeEngine } from "./hooks/useMetronomeEngine";
-// import { usePWAInstall } from "./hooks/usePWAInstall";
 import { BpmControl } from "./components/BpmControl/BpmControl";
 import { MeasureSelector } from "./components/MeasureSelector/MeasureSelector";
 import { TapTempoButton } from "./components/PlayerControls/TapTempoButton";
@@ -12,13 +9,7 @@ import { useMesure } from "./hooks/useMeasure";
 import { useSubdivision } from "./hooks/useSubdivision";
 import { useEngine } from "./hooks/useEngine";
 import { Transport } from "./components/PlayerControls/Transport";
-// import { Transport } from "./components/PlayerControls/Transport";
-// import { TapTempoButton } from "./components/PlayerControls/TapTempoButton";
-// import { Visualizer } from "./components/Visualizer/Visualizer";
-// import { TimeSignatureSelector } from "./components/TimeSignatureSelector/TimeSignatureSelector";
-// import { SubdivisionSelector } from "./components/SubdivisionSelector/SubdivisionSelector";
-// import { GapConfig } from "./components/GapConfig/GapConfig";
-// import { Download } from "lucide-react";
+import { GapConfig } from "./components/GapConfig/GapConfig";
 
 function App() {
   const { bpm, handleBpmChange } = useBpm();
@@ -31,55 +22,6 @@ function App() {
     subdivision: subdivisionConfig.subdivision,
   });
 
-  // const engine = useMetronomeEngine();
-  // const { isInstallable, install } = usePWAInstall();
-
-  // const [gapError, setGapError] = useState<string | null>(null);
-
-  // const hasInvalidGapConfig =
-  //   engine.gapActive &&
-  //   (!engine.onBars ||
-  //     !engine.offBars ||
-  //     engine.onBars < 1 ||
-  //     engine.offBars < 1);
-
-  // const handlePlay = () => {
-  //   if (hasInvalidGapConfig) {
-  //     setGapError(
-  //       "Configura valores válidos en Gap Trainer antes de reproducir."
-  //     );
-  //     return;
-  //   }
-  //   engine.start();
-  // };
-
-  // useEffect(() => {
-  //   if (!gapError) return;
-  //   const id = window.setTimeout(() => setGapError(null), 2500);
-  //   return () => window.clearTimeout(id);
-  // }, [gapError]);
-
-  // const engine = {
-  //   bpm: 120,
-  //   setBpm: () => {},
-  //   beatsPerBar: 4,
-  //   setBeatsPerBar: () => {},
-  //   subdivision: 1,
-  //   setSubdivision: () => {},
-  //   onBars: 4,
-  //   setOnBars: () => {},
-  //   offBars: 2,
-  //   setOffBars: () => {},
-  //   gapActive: false,
-  //   setGapActive: () => {},
-  //   isRunning: false,
-  //   start: () => {},
-  //   stop: () => {},
-  //   reset: () => {},
-  //   tapTempo: () => {},
-  //   currentBeat: 0,
-  //   isGap: false,
-  // };
   return (
     <div className="min-h-screen flex flex-col items-center py-12 bg-background text-foreground transition-colors duration-300">
       <main className="max-w-md w-full flex flex-col gap-6 px-4">
@@ -117,24 +59,11 @@ function App() {
           <SubdivisionSelector {...subdivisionConfig} />
         </div>
 
-        {/*<GapConfig
-          onBars={engine.onBars}
-          offBars={engine.offBars}
-          gapActive={engine.gapActive}
-          setOnBars={engine.setOnBars}
-          setOffBars={engine.setOffBars}
-          setGapActive={engine.setGapActive}
-        />*/}
+        <GapConfig />
 
         <div className="sticky bottom-6 mt-2 pb-6">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm -z-10 rounded-full blur-xl"></div>
-          <Transport
-            {...engine}
-
-            // onPlay={engine.start}
-            // onStop={engine.stop}
-            // onReset={engine.reset}
-          />
+          <Transport {...engine} />
         </div>
 
         {/*gapError && (
