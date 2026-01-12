@@ -23,6 +23,7 @@ type MainMessage = {
   beat: number;
   soundType: "accent" | "sub";
   timestamp: number;
+  targetTime: number;
   measureCount: number;
   measuresOn: number;
   measuresOff: number;
@@ -36,8 +37,9 @@ const state = {
   beat: 0,
   measure: 4,
   subdivision: 1,
-  lastTick: 0,
-  totalTicks: 16,
+  startTime: 0,
+  tickCount: 0,
+  totalTicks: 4,
   measureCount: 1,
   measuresOn: 1,
   measuresOff: 1,
@@ -57,14 +59,19 @@ let timeoutId: number | null = null;
 const scheduleNextTick = () => {
   if (!state.running) return;
 
+  const targetTime = state.startTime + state.tickCount * state.interval;
   const now = performance.now();
-  const nextTickTime = state.lastTick + state.interval;
-  const delay = Math.max(0, nextTickTime - now);
+  const delay = Math.max(0, targetTime - now);
 
   timeoutId = setTimeout(() => {
     if (!state.running) return;
 
+    const actualTime = performance.now();
+    const error = actualTime - targetTime;
+
     state.beat++;
+    state.tickCount++;
+
     if (state.beat >= state.totalTicks) {
       state.beat = 0;
       state.measureCount++;
@@ -79,6 +86,7 @@ const scheduleNextTick = () => {
       beat: state.beat,
       soundType,
       timestamp: performance.now(),
+      targetTime,
       measureCount: state.measureCount,
       measuresOn: state.measuresOn,
       measuresOff: state.measuresOff,
@@ -86,7 +94,11 @@ const scheduleNextTick = () => {
     };
 
     self.postMessage(message);
-    state.lastTick = performance.now();
+
+    if (Math.abs(error) > state.interval * 0.1) {
+      state.startTime = actualTime - state.tickCount * state.interval;
+    }
+
     scheduleNextTick();
   }, delay) as unknown as number;
 };
@@ -110,10 +122,11 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
       );
       state.beat = 0;
       state.measureCount = 1;
+      state.tickCount = 0;
       state.measuresOn = msg.config.measuresOn;
       state.measuresOff = msg.config.measuresOff;
       state.gapEnabled = msg.config.gapEnabled;
-      state.lastTick = performance.now();
+      state.startTime = performance.now();
       scheduleNextTick();
       break;
 
