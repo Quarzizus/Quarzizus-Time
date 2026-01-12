@@ -29,7 +29,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
   // },
   {
     id: "clave-son-2-3",
-    name: "Clave de Son 2-3",
+    name: "🌷 Clave de Son 2-3",
     description: "Patrón tradicional de clave de son (2-3)",
     pattern: [
       "mute",
@@ -57,7 +57,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: "clave-son-3-2",
-    name: "Clave de Son 3-2",
+    name: "⚡  Clave de Son 3-2 ",
     description: "Patrón tradicional de clave de son (3-2)",
     pattern: [
       "accent",
@@ -86,7 +86,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
 
   {
     id: "clave-rumba-2-3",
-    name: "Clave de Rumba 2-3",
+    name: "🪼 Clave de Rumba 2-3",
     description: "Patrón tradicional de clave de rumba (2-3)",
     pattern: [
       "mute",
@@ -114,7 +114,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: "clave-rumba-3-2",
-    name: "Clave de Rumba 3-2",
+    name: "🪷 Clave de Rumba 3-2",
     description: "Patrón tradicional de clave de rumba (3-2)",
     pattern: [
       "accent",
@@ -142,7 +142,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
   },
   {
     id: "clave-bembe",
-    name: "Clave de Bembé",
+    name: "🐴 Clave de Bembé",
     description: "Patrón tradicional de clave de bembé",
     pattern: [
       "accent",
@@ -163,6 +163,34 @@ const PATTERN_PRESETS: PatternPreset[] = [
     ],
     measure: 4,
     subdivision: 3,
+  },
+  {
+    id: "clave-bossa",
+    name: "🌺 Clave de Bossa",
+    description: "Patrón tradicional de clave de bossa (samba)",
+    pattern: [
+      "mute",
+      "mute",
+      "accent",
+      "mute",
+      //
+      "mute",
+      "accent",
+      "mute",
+      "mute",
+      //
+      "accent",
+      "mute",
+      "mute",
+      "accent",
+      //
+      "mute",
+      "mute",
+      "accent",
+      "mute",
+    ],
+    measure: 4,
+    subdivision: 4,
   },
 ];
 
