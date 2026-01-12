@@ -83,34 +83,7 @@ const PATTERN_PRESETS: PatternPreset[] = [
     measure: 4,
     subdivision: 4,
   },
-  {
-    id: "clave-rumba-3-2",
-    name: "Clave de Rumba 3-2",
-    description: "Patrón tradicional de clave de rumba (3-2)",
-    pattern: [
-      "accent",
-      "mute",
-      "mute",
-      "accent",
-      //
-      "mute",
-      "mute",
-      "mute",
-      "accent",
-      //
-      "mute",
-      "mute",
-      "accent",
-      "mute",
-      //
-      "accent",
-      "mute",
-      "mute",
-      "mute",
-    ],
-    measure: 4,
-    subdivision: 4,
-  },
+
   {
     id: "clave-rumba-2-3",
     name: "Clave de Rumba 2-3",
@@ -135,6 +108,34 @@ const PATTERN_PRESETS: PatternPreset[] = [
       "mute",
       "mute",
       "accent",
+    ],
+    measure: 4,
+    subdivision: 4,
+  },
+  {
+    id: "clave-rumba-3-2",
+    name: "Clave de Rumba 3-2",
+    description: "Patrón tradicional de clave de rumba (3-2)",
+    pattern: [
+      "accent",
+      "mute",
+      "mute",
+      "accent",
+      //
+      "mute",
+      "mute",
+      "mute",
+      "accent",
+      //
+      "mute",
+      "mute",
+      "accent",
+      "mute",
+      //
+      "accent",
+      "mute",
+      "mute",
+      "mute",
     ],
     measure: 4,
     subdivision: 4,
