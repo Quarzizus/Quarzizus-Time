@@ -1,115 +1,152 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMetronomeAudio } from "./useMetronomeAudio";
 import { useMetronomeScheduler } from "./useMetronomeScheduler";
 import type { MetronomeConfig, TickData } from "./useMetronomeScheduler";
 import { metrics } from "../lib/metrics";
 
-const useEngine = (config: MetronomeConfig) => {
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [isGap, setIsGap] = useState<boolean>(false);
-  const [currentBeat, setCurrentBeat] = useState<number>(0);
-  const [currentMeasure, setCurrentMeasure] = useState<number>(1);
-  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
-  const [showNotification, setShowNotification] = useState<boolean>(false);
+const hasConfigChanged = (
+  current: MetronomeConfig,
+  previous: MetronomeConfig
+) => {
+  return (
+    current.bpm !== previous.bpm ||
+    current.measure !== previous.measure ||
+    current.subdivision !== previous.subdivision ||
+    current.measuresOn !== previous.measuresOn ||
+    current.measuresOff !== previous.measuresOff ||
+    current.gapEnabled !== previous.gapEnabled
+  );
+};
 
+const shouldPlaySound = (data: TickData) => {
+  if (!data.gapEnabled) return true;
+  const cycleLength = data.measuresOn + data.measuresOff;
+  return data.measureCount % cycleLength < data.measuresOn;
+};
+
+const useAutoRestart = (onRestart: () => void) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancel = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const schedule = () => {
+    cancel();
+    timerRef.current = setTimeout(onRestart, 1000);
+  };
+
+  useEffect(() => () => cancel(), []);
+
+  return { schedule, cancel };
+};
+
+const useEngine = (config: MetronomeConfig) => {
+  const [isRunning, setIsRunning] = useState(false);
+  const [isGap, setIsGap] = useState(false);
+  const [currentBeat, setCurrentBeat] = useState(0);
+  const [currentMeasure, setCurrentMeasure] = useState(1);
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(
+    null
+  );
+  const [showNotification, setShowNotification] = useState(false);
+
+  const prevConfig = useRef(config);
   const { playSoundAtTargetTime } = useMetronomeAudio();
   const { start, stop, update, onTick } = useMetronomeScheduler();
 
-  const prevConfig = useRef<MetronomeConfig>(config);
+  const restartMetronome = () => {
+    start(config);
+    setIsRunning(true);
+    setShowNotification(false);
+    setNotificationMessage(null);
+  };
 
-  const handleTick = useCallback(
-    (data: TickData) => {
-      const shouldPlay =
-        !data.gapEnabled ||
-        data.measureCount % (data.measuresOn + data.measuresOff) <
-          data.measuresOn;
+  const autoRestart = useAutoRestart(restartMetronome);
 
-      // Registrar error de timing del worker
+  useEffect(() => {
+    const handleTick = (data: TickData) => {
       const errorMs = data.timestamp - data.targetTime;
-      metrics.recordTickError(errorMs, data.targetTime, data.timestamp, 60000 / config.bpm / config.subdivision);
+      const intervalMs = 60000 / config.bpm / config.subdivision;
+      metrics.recordTickError(
+        errorMs,
+        data.targetTime,
+        data.timestamp,
+        intervalMs
+      );
+
+      const shouldPlay = shouldPlaySound(data);
+      setIsGap(!shouldPlay);
 
       if (shouldPlay) {
         playSoundAtTargetTime(data.soundType, data.beat, data.targetTime);
-        setIsGap(false);
-      } else {
-        setIsGap(true);
       }
 
       setCurrentBeat(data.beat);
       setCurrentMeasure(data.measureCount);
-    },
-    [playSoundAtTargetTime, config.bpm, config.subdivision],
-  );
+    };
 
-  useEffect(() => {
     onTick(handleTick);
-  }, [onTick, handleTick]);
+  }, [onTick, config.bpm, config.subdivision, playSoundAtTargetTime]);
 
   useEffect(() => {
-    const hasUpdates =
-      config.bpm !== prevConfig.current.bpm ||
-      config.measure !== prevConfig.current.measure ||
-      config.subdivision !== prevConfig.current.subdivision ||
-      config.measuresOn !== prevConfig.current.measuresOn ||
-      config.measuresOff !== prevConfig.current.measuresOff ||
-      config.gapEnabled !== prevConfig.current.gapEnabled;
+    const configChanged = hasConfigChanged(config, prevConfig.current);
 
-    if (hasUpdates) {
-      if (isRunning) {
-        // Pausar automáticamente cuando hay cambios mientras corre
-        stop();
-        metrics.recordWorkerStop();
-        
-        // Usar setTimeout para evitar cascading renders
-        const timer = setTimeout(() => {
-          setIsRunning(false);
-          setCurrentBeat(0);
-          setCurrentMeasure(1);
-          setIsGap(false);
-          setNotificationMessage("Cambia la configuración y dale play ⚡");
-          setShowNotification(true);
-          
-          // Auto-ocultar notificación después de 2 segundos
-          setTimeout(() => {
-            setShowNotification(false);
-            setNotificationMessage(null);
-          }, 2000);
-        }, 0);
-        
-        return () => clearTimeout(timer);
-      } else {
-        // Si ya está pausado, solo actualizar silenciosamente
-        update(config);
-      }
+    if (configChanged && isRunning) {
+      stop();
+      metrics.recordWorkerStop();
+      autoRestart.cancel();
+      prevConfig.current = config;
+
+      const uiTimer = setTimeout(() => {
+        setIsRunning(false);
+        setCurrentBeat(0);
+        setCurrentMeasure(1);
+        setIsGap(false);
+        setNotificationMessage("Actualizando configuración");
+        setShowNotification(true);
+        autoRestart.schedule();
+      }, 0);
+
+      return () => clearTimeout(uiTimer);
+    }
+
+    if (configChanged && !isRunning) {
+      update(config);
       prevConfig.current = config;
     }
-  }, [config, update, isRunning, stop]);
+  }, [config, isRunning, stop, start, update, autoRestart]);
 
-  const onPlay = useCallback(() => {
+  const onPlay = () => {
     metrics.recordWorkerStart(config);
     start(config);
     setIsRunning(true);
-  }, [config, start]);
+  };
 
-  const onStop = useCallback(() => {
+  const onStop = () => {
     stop();
     metrics.recordWorkerStop();
     setIsRunning(false);
-  }, [stop]);
+    autoRestart.cancel();
+  };
 
-  const onReset = useCallback(() => {
+  const onReset = () => {
     stop();
     metrics.recordWorkerStop();
     setIsRunning(false);
     setCurrentBeat(0);
     setCurrentMeasure(1);
     setIsGap(false);
-  }, [stop]);
+    autoRestart.cancel();
+  };
 
-  const clearNotification = useCallback(() => {
+  const clearNotification = () => {
     setShowNotification(false);
     setNotificationMessage(null);
-  }, []);
+  };
 
   return {
     currentBeat,

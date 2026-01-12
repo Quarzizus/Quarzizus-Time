@@ -1,18 +1,21 @@
 import { metrics } from "./metrics";
 
-export class AudioClock {
+const KEEP_ALIVE_INTERVAL = 10000;
+const SILENT_PULSE_INTERVAL = 15000;
+const DRIFT_LOG_INTERVAL = 5000;
+const SILENT_PULSE_DURATION = 0.1;
+
+class AudioClock {
   private static instance: AudioClock | null = null;
   private audioContext: AudioContext | null = null;
-  private audioStartTime: number = 0;
-  private perfStartTime: number = 0;
+  private audioStartTime = 0;
+  private perfStartTime = 0;
   private keepAliveInterval: number | null = null;
   private silentKeepAliveInterval: number | null = null;
   private driftLogInterval: number | null = null;
-  private isSynchronized: boolean = false;
+  private isSynchronized = false;
 
-  private constructor() {
-    // Lazy initialization
-  }
+  private constructor() {}
 
   static getInstance(): AudioClock {
     if (!AudioClock.instance) {
@@ -21,198 +24,177 @@ export class AudioClock {
     return AudioClock.instance;
   }
 
-  private ensureContext(): void {
-    if (this.audioContext === null) {
-      const AudioContextClass = window.AudioContext;
-      this.audioContext = new AudioContextClass();
-      this.startKeepAlive();
-      
-      // Registrar cambios de estado del AudioContext
-      this.audioContext.addEventListener('statechange', () => {
-        metrics.recordAudioStateChange(this.audioContext!.state);
-      });
-    }
+  private ensureContext() {
+    if (this.audioContext) return;
+
+    this.audioContext = new AudioContext();
+    this.setupKeepAlive();
+    this.audioContext.addEventListener("statechange", () => {
+      metrics.recordAudioStateChange(this.audioContext!.state);
+    });
   }
 
-  private startKeepAlive(): void {
-    if (this.keepAliveInterval !== null) {
-      clearInterval(this.keepAliveInterval);
-    }
+  private setupKeepAlive() {
+    this.clearIntervals();
 
     this.keepAliveInterval = window.setInterval(async () => {
-      if (this.audioContext!.state === 'suspended') {
+      if (this.audioContext!.state === "suspended") {
         await this.audioContext!.resume();
       }
-    }, 10000);
+    }, KEEP_ALIVE_INTERVAL);
 
-    // Silent pulse keep-alive for browsers that suspend AudioContext despite resume calls
-    if (this.silentKeepAliveInterval !== null) {
-      clearInterval(this.silentKeepAliveInterval);
-    }
+    this.silentKeepAliveInterval = window.setInterval(
+      () => this.playSilentPulse(),
+      SILENT_PULSE_INTERVAL
+    );
 
-    this.silentKeepAliveInterval = window.setInterval(() => {
-      this.playSilentPulse();
-    }, 15000);
-
-    // Drift logging cada 5 segundos
-    if (this.driftLogInterval !== null) {
-      clearInterval(this.driftLogInterval);
-    }
-
-    this.driftLogInterval = window.setInterval(() => {
-      this.logDrift();
-    }, 5000);
+    this.driftLogInterval = window.setInterval(
+      () => this.logDrift(),
+      DRIFT_LOG_INTERVAL
+    );
   }
 
-  private playSilentPulse(): void {
+  private playSilentPulse() {
     this.ensureContext();
-    if (this.audioContext!.state !== 'running') {
-      return;
-    }
-    
+    if (this.audioContext!.state !== "running") return;
+
     try {
       const oscillator = this.audioContext!.createOscillator();
       const gain = this.audioContext!.createGain();
-      
-      oscillator.frequency.value = 1; // 1 Hz, inaudible
-      gain.gain.value = 0.0001; // Extremely quiet
-      
+
+      oscillator.frequency.value = 1;
+      gain.gain.value = 0.0001;
+
       oscillator.connect(gain);
       gain.connect(this.audioContext!.destination);
-      
-      oscillator.start(this.audioContext!.currentTime);
-      oscillator.stop(this.audioContext!.currentTime + 0.1);
+
+      const now = this.audioContext!.currentTime;
+      oscillator.start(now);
+      oscillator.stop(now + SILENT_PULSE_DURATION);
     } catch {
       // Ignore errors
     }
   }
 
-  private logDrift(): void {
-    if (!this.isSynchronized) {
-      return;
-    }
+  private logDrift() {
+    if (!this.isSynchronized) return;
+
     const audioTime = this.audioContext!.currentTime;
     const perfTime = performance.now();
     const calculatedAudioTime = this.getAudioTime(perfTime);
     const driftMs = (calculatedAudioTime - audioTime) * 1000;
+
     metrics.recordClockDrift(driftMs, audioTime, perfTime);
   }
 
-  private stopKeepAlive(): void {
-    if (this.keepAliveInterval !== null) {
-      clearInterval(this.keepAliveInterval);
-      this.keepAliveInterval = null;
-    }
-    if (this.silentKeepAliveInterval !== null) {
-      clearInterval(this.silentKeepAliveInterval);
-      this.silentKeepAliveInterval = null;
-    }
-    if (this.driftLogInterval !== null) {
-      clearInterval(this.driftLogInterval);
-      this.driftLogInterval = null;
-    }
+  private clearIntervals() {
+    if (this.keepAliveInterval) clearInterval(this.keepAliveInterval);
+    if (this.silentKeepAliveInterval) clearInterval(this.silentKeepAliveInterval);
+    if (this.driftLogInterval) clearInterval(this.driftLogInterval);
   }
 
-  async resume(): Promise<void> {
+  async resume() {
     this.ensureContext();
     const previousState = this.audioContext!.state;
-    if (previousState === 'suspended') {
+
+    if (previousState === "suspended") {
       await this.audioContext!.resume();
       metrics.recordAudioStateChange(this.audioContext!.state, previousState);
       metrics.recordContextResume();
     }
   }
 
-  suspend(): void {
+  suspend() {
     this.ensureContext();
     const previousState = this.audioContext!.state;
-    if (previousState === 'running') {
+
+    if (previousState === "running") {
       this.audioContext!.suspend();
       metrics.recordAudioStateChange(this.audioContext!.state, previousState);
       metrics.recordContextSuspend();
     }
   }
 
-  synchronizeClocks(): void {
+  synchronizeClocks() {
     this.ensureContext();
     this.audioStartTime = this.audioContext!.currentTime;
     this.perfStartTime = performance.now();
     this.isSynchronized = true;
-    
+
     const driftMs = this.audioStartTime * 1000 - this.perfStartTime;
     metrics.recordClockDrift(driftMs, this.audioStartTime, this.perfStartTime);
   }
 
-  getAudioTime(perfTime: number = performance.now()): number {
+  getAudioTime(perfTime = performance.now()) {
     if (!this.isSynchronized) {
       this.synchronizeClocks();
     }
-    
+
     const perfDelta = perfTime - this.perfStartTime;
-    return this.audioStartTime + (perfDelta / 1000);
+    return this.audioStartTime + perfDelta / 1000;
   }
 
-  getPerfTime(audioTime: number): number {
+  getPerfTime(audioTime: number) {
     if (!this.isSynchronized) {
       this.synchronizeClocks();
     }
-    
+
     const audioDelta = audioTime - this.audioStartTime;
-    return this.perfStartTime + (audioDelta * 1000);
+    return this.perfStartTime + audioDelta * 1000;
   }
 
-  scheduleAtAudioTime(callback: (audioTime: number) => void, audioTime: number): () => void {
+  scheduleAtAudioTime(callback: (audioTime: number) => void, audioTime: number) {
     this.ensureContext();
     const nowAudio = this.audioContext!.currentTime;
     const delay = Math.max(0, audioTime - nowAudio);
-    
+
     if (delay === 0) {
       callback(audioTime);
-      return () => {}; // No-op cancel function
-    } else {
-      const source = this.audioContext!.createBufferSource();
-      source.buffer = this.audioContext!.createBuffer(1, 1, this.audioContext!.sampleRate);
-      source.connect(this.audioContext!.destination);
-      source.start(audioTime);
-      source.stop(audioTime + 0.001);
-      
-      let cancelled = false;
-      source.onended = () => {
-        if (!cancelled) {
-          callback(audioTime);
-        }
-      };
-      
-      return () => {
-        cancelled = true;
-        try {
-          source.stop();
-          source.disconnect();
-        } catch {
-          // Source may have already ended or been stopped
-        }
-      };
+      return () => {};
     }
+
+    const source = this.audioContext!.createBufferSource();
+    source.buffer = this.audioContext!.createBuffer(1, 1, this.audioContext!.sampleRate);
+    source.connect(this.audioContext!.destination);
+    source.start(audioTime);
+    source.stop(audioTime + 0.001);
+
+    let cancelled = false;
+    source.onended = () => {
+      if (!cancelled) {
+        callback(audioTime);
+      }
+    };
+
+    return () => {
+      cancelled = true;
+      try {
+        source.stop();
+        source.disconnect();
+      } catch {
+        // Ignore if already stopped
+      }
+    };
   }
 
-  getContext(): AudioContext {
+  getContext() {
     this.ensureContext();
     return this.audioContext!;
   }
 
-  getCurrentAudioTime(): number {
+  getCurrentAudioTime() {
     this.ensureContext();
     return this.audioContext!.currentTime;
   }
 
-  isRunning(): boolean {
+  isRunning() {
     this.ensureContext();
-    return this.audioContext!.state === 'running';
+    return this.audioContext!.state === "running";
   }
 
-  destroy(): void {
-    this.stopKeepAlive();
-    if (this.audioContext !== null && this.audioContext.state !== 'closed') {
+  destroy() {
+    this.clearIntervals();
+    if (this.audioContext && this.audioContext.state !== "closed") {
       this.audioContext.close();
       this.audioContext = null;
     }
