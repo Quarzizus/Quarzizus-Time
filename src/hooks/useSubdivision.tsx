@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const useSubdivision = () => {
-  const [subdivision, setSubdivision] = useState<number>(1);
+const useSubdivision = (initialSubdivision?: number) => {
+  const [subdivision, setSubdivision] = useState<number>(initialSubdivision || 1);
+
+  useEffect(() => {
+    if (initialSubdivision !== undefined) {
+      setSubdivision(initialSubdivision);
+    }
+  }, [initialSubdivision]);
 
   const options = [
     {

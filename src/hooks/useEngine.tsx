@@ -14,7 +14,9 @@ const hasConfigChanged = (
     current.subdivision !== previous.subdivision ||
     current.measuresOn !== previous.measuresOn ||
     current.measuresOff !== previous.measuresOff ||
-    current.gapEnabled !== previous.gapEnabled
+    current.gapEnabled !== previous.gapEnabled ||
+    current.patternMode !== previous.patternMode ||
+    JSON.stringify(current.pattern) !== JSON.stringify(previous.pattern)
   );
 };
 

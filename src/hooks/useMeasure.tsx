@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const useMesure = () => {
-  const [measure, setMeasure] = useState<number>(4);
+const useMesure = (initialMeasure?: number) => {
+  const [measure, setMeasure] = useState<number>(initialMeasure || 4);
+
+  useEffect(() => {
+    if (initialMeasure !== undefined) {
+      setMeasure(initialMeasure);
+    }
+  }, [initialMeasure]);
 
   const options = [
     { value: 2, label: "2/4" },

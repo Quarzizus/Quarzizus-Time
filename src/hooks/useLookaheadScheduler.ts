@@ -3,6 +3,8 @@ import { audioClock } from "../lib/audioClock";
 import { createClickBuffer } from "../lib/audioUtils";
 import { metrics } from "../lib/metrics";
 
+export type BeatType = "accent" | "sub" | "mute";
+
 export interface MetronomeConfig {
   bpm: number;
   measure: number;
@@ -10,11 +12,13 @@ export interface MetronomeConfig {
   measuresOn: number;
   measuresOff: number;
   gapEnabled: boolean;
+  patternMode: "simple" | "advanced";
+  pattern: BeatType[];
 }
 
 export interface TickData {
   beat: number;
-  soundType: "accent" | "sub";
+  soundType: "accent" | "sub" | "mute";
   measureCount: number;
   measuresOn: number;
   measuresOff: number;
@@ -40,6 +44,8 @@ interface SchedulerState {
   measuresOn: number;
   measuresOff: number;
   gapEnabled: boolean;
+  patternMode: "simple" | "advanced";
+  pattern: BeatType[];
 }
 
 const calculateInterval = (bpm: number, subdivision: number) => {
@@ -50,7 +56,11 @@ const calculateTotalTicks = (measure: number, subdivision: number) => {
   return measure * subdivision;
 };
 
-const determineSoundType = (beat: number, subdivision: number): "accent" | "sub" => {
+const determineSoundType = (beat: number, subdivision: number, patternMode: "simple" | "advanced", pattern: BeatType[]): "accent" | "sub" | "mute" => {
+  if (patternMode === "advanced" && pattern.length > 0) {
+    return pattern[beat % pattern.length];
+  }
+  
   const isFirstBeat = beat === 0;
   const isAccentBeat = beat % subdivision === 0;
   return isFirstBeat || isAccentBeat ? "accent" : "sub";
@@ -76,6 +86,8 @@ const createInitialState = (): SchedulerState => ({
   measuresOn: 1,
   measuresOff: 1,
   gapEnabled: false,
+  patternMode: "simple",
+  pattern: ["accent", "sub", "sub", "sub"],
 });
 
 export const useLookaheadScheduler = () => {
@@ -93,7 +105,9 @@ export const useLookaheadScheduler = () => {
     subBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
   };
 
-  const scheduleSound = (audioTime: number, type: "accent" | "sub") => {
+  const scheduleSound = (audioTime: number, type: "accent" | "sub" | "mute") => {
+    if (type === "mute") return;
+    
     const ctx = audioClock.getContext();
     const buffer = type === "accent" ? accentBufferRef.current : subBufferRef.current;
     
@@ -121,7 +135,7 @@ export const useLookaheadScheduler = () => {
     while (state.nextTickTime < scheduleAheadTime) {
       const currentBeat = state.beat;
       const currentMeasureCount = state.measureCount;
-      const soundType = determineSoundType(currentBeat, state.subdivision);
+      const soundType = determineSoundType(currentBeat, state.subdivision, state.patternMode, state.pattern);
       const shouldPlay = shouldPlayInGap(
         currentMeasureCount,
         state.measuresOn,
@@ -129,7 +143,7 @@ export const useLookaheadScheduler = () => {
         state.gapEnabled
       );
 
-      if (shouldPlay) {
+      if (shouldPlay && soundType !== "mute") {
         scheduleSound(state.nextTickTime, soundType);
       }
 
@@ -179,6 +193,8 @@ export const useLookaheadScheduler = () => {
     state.measuresOn = config.measuresOn;
     state.measuresOff = config.measuresOff;
     state.gapEnabled = config.gapEnabled;
+    state.patternMode = config.patternMode;
+    state.pattern = config.pattern;
     state.nextTickTime = ctx.currentTime;
 
     metrics.recordWorkerStart(config);
@@ -216,6 +232,8 @@ export const useLookaheadScheduler = () => {
       state.measuresOn = config.measuresOn;
       state.measuresOff = config.measuresOff;
       state.gapEnabled = config.gapEnabled;
+      state.patternMode = config.patternMode;
+      state.pattern = config.pattern;
       state.interval = calculateInterval(config.bpm, config.subdivision);
       state.totalTicks = calculateTotalTicks(config.measure, config.subdivision);
     }

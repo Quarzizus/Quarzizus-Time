@@ -11,6 +11,8 @@ import { useEngine } from "./hooks/useEngine";
 import { Transport } from "./components/PlayerControls/Transport";
 import { GapConfig } from "./components/GapConfig/GapConfig";
 import { useGap } from "./hooks/useGap";
+import { PatternSelector } from "./components/PatternSelector/PatternSelector";
+import { usePattern } from "./hooks/usePattern";
 import { Download } from "lucide-react";
 import { usePWAInstall } from "./hooksOld/usePWAInstall";
 import { MetricsPanel } from "./components/MetricsPanel/MetricsPanel";
@@ -20,16 +22,35 @@ function App() {
   const { install, isInstallable } = usePWAInstall();
   const { bpm, handleBpmChange } = useBpm();
   const { tapTempo } = useTapTempo(handleBpmChange);
-  const measureConfig = useMesure();
-  const subdivisionConfig = useSubdivision();
+  const patternConfig = usePattern();
+
+  const measureConfig = useMesure(
+    patternConfig.patternMode === "simple"
+      ? undefined
+      : patternConfig.getCurrentMeasure(),
+  );
+  const subdivisionConfig = useSubdivision(
+    patternConfig.patternMode === "simple"
+      ? undefined
+      : patternConfig.getCurrentSubdivision(),
+  );
   const gapConfig = useGap();
+
   const engine = useEngine({
     bpm,
-    measure: measureConfig.measure,
-    subdivision: subdivisionConfig.subdivision,
+    measure:
+      patternConfig.patternMode === "simple"
+        ? measureConfig.measure
+        : patternConfig.getCurrentMeasure(),
+    subdivision:
+      patternConfig.patternMode === "simple"
+        ? subdivisionConfig.subdivision
+        : patternConfig.getCurrentSubdivision(),
     gapEnabled: gapConfig.gapEnabled,
     measuresOff: gapConfig.measuresOff,
     measuresOn: gapConfig.measuresOn,
+    patternMode: patternConfig.patternMode,
+    pattern: patternConfig.getCurrentPattern(),
   });
 
   return (
@@ -55,8 +76,16 @@ function App() {
         </header>
 
         <Visualizer
-          measure={measureConfig.measure}
-          subdivision={subdivisionConfig.subdivision}
+          measure={
+            patternConfig.patternMode === "simple"
+              ? measureConfig.measure
+              : patternConfig.getCurrentMeasure()
+          }
+          subdivision={
+            patternConfig.patternMode === "simple"
+              ? subdivisionConfig.subdivision
+              : patternConfig.getCurrentSubdivision()
+          }
           currentBeat={engine.currentBeat}
           isGap={engine.isGap}
         />
@@ -66,10 +95,20 @@ function App() {
           <TapTempoButton onTap={tapTempo} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <MeasureSelector {...measureConfig} />
-          <SubdivisionSelector {...subdivisionConfig} />
-        </div>
+        <PatternSelector
+          patternMode={patternConfig.patternMode}
+          selectedPresetId={patternConfig.selectedPresetId}
+          presets={patternConfig.presets}
+          onPatternModeChange={patternConfig.handlePatternModeChange}
+          onPresetChange={patternConfig.handlePresetChange}
+        />
+
+        {patternConfig.patternMode === "simple" && (
+          <div className="grid grid-cols-2 gap-4">
+            <MeasureSelector {...measureConfig} />
+            <SubdivisionSelector {...subdivisionConfig} />
+          </div>
+        )}
 
         <GapConfig {...gapConfig} />
 
