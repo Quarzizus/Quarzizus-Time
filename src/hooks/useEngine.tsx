@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useMetronomeAudio } from "./useMetronomeAudio";
-import { useMetronomeScheduler } from "./useMetronomeScheduler";
-import type { MetronomeConfig, TickData } from "./useMetronomeScheduler";
+import { useLookaheadScheduler } from "./useLookaheadScheduler";
+import type { MetronomeConfig, TickData } from "./useLookaheadScheduler";
 import { metrics } from "../lib/metrics";
 import { audioClock } from "../lib/audioClock";
 
@@ -69,8 +68,7 @@ const useEngine = (config: MetronomeConfig) => {
 
   const prevConfig = useRef(config);
   const wasRunningBeforeBackground = useRef(false);
-  const { playSoundAtTargetTime } = useMetronomeAudio();
-  const { start, stop, update, onTick } = useMetronomeScheduler();
+  const { start, stop, update, onTick } = useLookaheadScheduler();
 
   const restartMetronome = () => {
     start(config);
@@ -99,28 +97,14 @@ const useEngine = (config: MetronomeConfig) => {
 
   useEffect(() => {
     const handleTick = (data: TickData) => {
-      const errorMs = data.timestamp - data.targetTime;
-      const intervalMs = 60000 / config.bpm / config.subdivision;
-      metrics.recordTickError(
-        errorMs,
-        data.targetTime,
-        data.timestamp,
-        intervalMs
-      );
-
       const shouldPlay = shouldPlaySound(data);
       setIsGap(!shouldPlay);
-
-      if (shouldPlay) {
-        playSoundAtTargetTime(data.soundType, data.beat, data.targetTime);
-      }
-
       setCurrentBeat(data.beat);
       setCurrentMeasure(data.measureCount);
     };
 
     onTick(handleTick);
-  }, [onTick, config.bpm, config.subdivision, playSoundAtTargetTime]);
+  }, [onTick]);
 
   useEffect(() => {
     const configChanged = hasConfigChanged(config, prevConfig.current);

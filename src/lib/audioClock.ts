@@ -147,40 +147,6 @@ class AudioClock {
     return this.perfStartTime + audioDelta * 1000;
   }
 
-  scheduleAtAudioTime(callback: (audioTime: number) => void, audioTime: number) {
-    this.ensureContext();
-    const nowAudio = this.audioContext!.currentTime;
-    const delay = Math.max(0, audioTime - nowAudio);
-
-    if (delay === 0) {
-      callback(audioTime);
-      return () => {};
-    }
-
-    const source = this.audioContext!.createBufferSource();
-    source.buffer = this.audioContext!.createBuffer(1, 1, this.audioContext!.sampleRate);
-    source.connect(this.audioContext!.destination);
-    source.start(audioTime);
-    source.stop(audioTime + 0.001);
-
-    let cancelled = false;
-    source.onended = () => {
-      if (!cancelled) {
-        callback(audioTime);
-      }
-    };
-
-    return () => {
-      cancelled = true;
-      try {
-        source.stop();
-        source.disconnect();
-      } catch {
-        // Ignore if already stopped
-      }
-    };
-  }
-
   getContext() {
     this.ensureContext();
     return this.audioContext!;
