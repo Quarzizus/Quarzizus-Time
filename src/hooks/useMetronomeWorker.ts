@@ -13,6 +13,7 @@ export interface TickData {
   beat: number;
   soundType: "accent" | "sub";
   timestamp: number;
+  targetTime: number;
   measureCount: number;
   measuresOn: number;
   measuresOff: number;
@@ -40,6 +41,7 @@ const useMetronomeWorker = () => {
         beat: number;
         soundType: "accent" | "sub";
         timestamp: number;
+        targetTime: number;
         measureCount: number;
         measuresOn: number;
         measuresOff: number;
@@ -51,6 +53,7 @@ const useMetronomeWorker = () => {
           beat: e.data.beat,
           soundType: e.data.soundType,
           timestamp: e.data.timestamp,
+          targetTime: e.data.targetTime,
           measureCount: e.data.measureCount,
           measuresOn: e.data.measuresOn,
           measuresOff: e.data.measuresOff,

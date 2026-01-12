@@ -25,7 +25,11 @@ const useEngine = (config: MetronomeConfig) => {
           data.measuresOn;
 
       if (shouldPlay) {
-        playSound(data.soundType, data.beat);
+        const now = performance.now();
+        const latency = now - data.targetTime;
+        const audioLatency = Math.max(0, 0.05 - latency / 1000);
+        
+        playSound(data.soundType, data.beat, audioLatency);
         setIsGap(false);
       } else {
         setIsGap(true);

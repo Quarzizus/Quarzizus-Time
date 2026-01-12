@@ -4,7 +4,7 @@ import { AudioContextManager, createClickBuffer } from "../lib/audioUtils";
 export type SoundType = "accent" | "sub";
 
 interface UseMetronomeAudioReturn {
-  playSound: (type: SoundType, beat: number) => void;
+  playSound: (type: SoundType, beat: number, delay?: number) => void;
   resumeContext: () => Promise<void>;
 }
 
@@ -28,7 +28,7 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
     await AudioContextManager.resume();
   }, []);
 
-  const playSound = useCallback((type: SoundType) => {
+  const playSound = useCallback((type: SoundType, _beat: number, delay: number = 0) => {
     const ctx = audioContextRef.current;
     if (!ctx) return;
 
@@ -50,7 +50,7 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
 
     source.connect(gain);
     gain.connect(ctx.destination);
-    source.start(ctx.currentTime);
+    source.start(ctx.currentTime + delay);
   }, []);
 
   return {
