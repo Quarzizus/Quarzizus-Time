@@ -183,10 +183,10 @@ const useMetronomeScheduler = () => {
     scheduleNextTickRef.current = scheduleNextTick;
   });
 
-  const start = (config: MetronomeConfig) => {
+  const start = async (config: MetronomeConfig) => {
     const state = stateRef.current;
 
-    audioClock.resume();
+    await audioClock.resume();
     audioClock.synchronizeClocks();
 
     state.running = true;

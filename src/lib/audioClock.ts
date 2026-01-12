@@ -1,7 +1,7 @@
 import { metrics } from "./metrics";
 
-const KEEP_ALIVE_INTERVAL = 10000;
-const SILENT_PULSE_INTERVAL = 15000;
+const KEEP_ALIVE_INTERVAL = 5000;
+const SILENT_PULSE_INTERVAL = 8000;
 const DRIFT_LOG_INTERVAL = 5000;
 const SILENT_PULSE_DURATION = 0.1;
 
@@ -32,6 +32,10 @@ class AudioClock {
     this.audioContext.addEventListener("statechange", () => {
       metrics.recordAudioStateChange(this.audioContext!.state);
     });
+  }
+
+  isContextCreated() {
+    return this.audioContext !== null;
   }
 
   private setupKeepAlive() {
@@ -97,7 +101,7 @@ class AudioClock {
     this.ensureContext();
     const previousState = this.audioContext!.state;
 
-    if (previousState === "suspended") {
+    if (previousState === "suspended" || previousState === "interrupted") {
       await this.audioContext!.resume();
       metrics.recordAudioStateChange(this.audioContext!.state, previousState);
       metrics.recordContextResume();

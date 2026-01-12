@@ -11,23 +11,24 @@ interface UseMetronomeAudioReturn {
 const useMetronomeAudio = (): UseMetronomeAudioReturn => {
   const accentBufferRef = useRef<AudioBuffer | null>(null);
   const subBufferRef = useRef<AudioBuffer | null>(null);
+  const buffersInitialized = useRef(false);
 
-  // Inicializar buffers de audio
-  useEffect(() => {
-    const initAudio = () => {
-      const ctx = audioClock.getContext();
-      accentBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
-      subBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
-    };
-    initAudio();
-  }, []);
+  const ensureBuffersInitialized = () => {
+    if (buffersInitialized.current) return;
+    
+    const ctx = audioClock.getContext();
+    accentBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
+    subBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
+    buffersInitialized.current = true;
+  };
 
   const playSoundAtTargetTime = useCallback((type: SoundType, _beat: number, targetTime: number) => {
     const ctx = audioClock.getContext();
 
-    // Asegurar que el contexto esté activo
-    if (ctx.state === "suspended") {
-      ctx.resume();
+    ensureBuffersInitialized();
+
+    if (ctx.state === "suspended" || ctx.state === "interrupted") {
+      ctx.resume().catch(() => {});
     }
 
     const buffer =

@@ -3,6 +3,7 @@ import { useMetronomeAudio } from "./useMetronomeAudio";
 import { useMetronomeScheduler } from "./useMetronomeScheduler";
 import type { MetronomeConfig, TickData } from "./useMetronomeScheduler";
 import { metrics } from "../lib/metrics";
+import { audioClock } from "../lib/audioClock";
 
 const hasConfigChanged = (
   current: MetronomeConfig,
@@ -44,6 +45,18 @@ const useAutoRestart = (onRestart: () => void) => {
   return { schedule, cancel };
 };
 
+const usePageVisibility = (onVisibilityChange: (isVisible: boolean) => void) => {
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const isVisible = !document.hidden;
+      onVisibilityChange(isVisible);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [onVisibilityChange]);
+};
+
 const useEngine = (config: MetronomeConfig) => {
   const [isRunning, setIsRunning] = useState(false);
   const [isGap, setIsGap] = useState(false);
@@ -55,6 +68,7 @@ const useEngine = (config: MetronomeConfig) => {
   const [showNotification, setShowNotification] = useState(false);
 
   const prevConfig = useRef(config);
+  const wasRunningBeforeBackground = useRef(false);
   const { playSoundAtTargetTime } = useMetronomeAudio();
   const { start, stop, update, onTick } = useMetronomeScheduler();
 
@@ -66,6 +80,22 @@ const useEngine = (config: MetronomeConfig) => {
   };
 
   const autoRestart = useAutoRestart(restartMetronome);
+
+  usePageVisibility((isVisible) => {
+    if (!isVisible && isRunning) {
+      wasRunningBeforeBackground.current = true;
+      stop();
+      metrics.recordWorkerStop();
+      setIsRunning(false);
+      setNotificationMessage("Pausado (app en background)");
+      setShowNotification(true);
+    } else if (isVisible && wasRunningBeforeBackground.current) {
+      wasRunningBeforeBackground.current = false;
+      audioClock.synchronizeClocks();
+      setNotificationMessage("¿Continuar?");
+      setShowNotification(true);
+    }
+  });
 
   useEffect(() => {
     const handleTick = (data: TickData) => {
