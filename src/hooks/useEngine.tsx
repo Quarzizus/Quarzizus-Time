@@ -22,7 +22,7 @@ const hasConfigChanged = (
 const shouldPlaySound = (data: TickData) => {
   if (!data.gapEnabled) return true;
   const cycleLength = data.measuresOn + data.measuresOff;
-  return data.measureCount % cycleLength < data.measuresOn;
+  return (data.measureCount - 1) % cycleLength < data.measuresOn;
 };
 
 const useAutoRestart = (onRestart: () => void) => {
