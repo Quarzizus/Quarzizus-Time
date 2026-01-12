@@ -144,7 +144,12 @@ export class MetricsCollector {
       return '';
     }
 
-    const headers = ['type', 'timestamp', ...Object.keys(this.events[0].data)];
+    // Recolectar todas las claves únicas de todos los eventos
+    const allKeys = new Set<string>();
+    this.events.forEach(event => {
+      Object.keys(event.data).forEach(key => allKeys.add(key));
+    });
+    const headers = ['type', 'timestamp', ...Array.from(allKeys).sort()];
     
     const rows = this.events.map(event => {
       const values: string[] = [event.type, String(event.timestamp)];

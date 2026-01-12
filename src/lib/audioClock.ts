@@ -7,6 +7,7 @@ export class AudioClock {
   private perfStartTime: number = 0;
   private keepAliveInterval: number | null = null;
   private silentKeepAliveInterval: number | null = null;
+  private driftLogInterval: number | null = null;
   private isSynchronized: boolean = false;
 
   private constructor() {
@@ -25,6 +26,11 @@ export class AudioClock {
       const AudioContextClass = window.AudioContext;
       this.audioContext = new AudioContextClass();
       this.startKeepAlive();
+      
+      // Registrar cambios de estado del AudioContext
+      this.audioContext.addEventListener('statechange', () => {
+        metrics.recordAudioStateChange(this.audioContext!.state);
+      });
     }
   }
 
@@ -47,6 +53,15 @@ export class AudioClock {
     this.silentKeepAliveInterval = window.setInterval(() => {
       this.playSilentPulse();
     }, 15000);
+
+    // Drift logging cada 5 segundos
+    if (this.driftLogInterval !== null) {
+      clearInterval(this.driftLogInterval);
+    }
+
+    this.driftLogInterval = window.setInterval(() => {
+      this.logDrift();
+    }, 5000);
   }
 
   private playSilentPulse(): void {
@@ -72,6 +87,17 @@ export class AudioClock {
     }
   }
 
+  private logDrift(): void {
+    if (!this.isSynchronized) {
+      return;
+    }
+    const audioTime = this.audioContext!.currentTime;
+    const perfTime = performance.now();
+    const calculatedAudioTime = this.getAudioTime(perfTime);
+    const driftMs = (calculatedAudioTime - audioTime) * 1000;
+    metrics.recordClockDrift(driftMs, audioTime, perfTime);
+  }
+
   private stopKeepAlive(): void {
     if (this.keepAliveInterval !== null) {
       clearInterval(this.keepAliveInterval);
@@ -80,6 +106,10 @@ export class AudioClock {
     if (this.silentKeepAliveInterval !== null) {
       clearInterval(this.silentKeepAliveInterval);
       this.silentKeepAliveInterval = null;
+    }
+    if (this.driftLogInterval !== null) {
+      clearInterval(this.driftLogInterval);
+      this.driftLogInterval = null;
     }
   }
 

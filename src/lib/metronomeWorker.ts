@@ -95,7 +95,8 @@ const scheduleNextTick = () => {
 
     self.postMessage(message);
 
-    if (Math.abs(error) > state.interval * 0.1) {
+    // Aumentar umbral de recalibración para móviles (20% en lugar de 10%)
+    if (Math.abs(error) > state.interval * 0.2) {
       state.startTime = actualTime - state.tickCount * state.interval;
     }
 
