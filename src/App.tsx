@@ -42,7 +42,7 @@ function App() {
           <p className="text-muted-foreground text-sm font-medium">
             Metrónomo profesional
           </p>
-          <p className="text-muted-foreground text-xs font-medium">V.0.0.7</p>
+          <p className="text-muted-foreground text-xs font-medium">V.0.0.8</p>
           {isInstallable && (
             <button
               onClick={install}
