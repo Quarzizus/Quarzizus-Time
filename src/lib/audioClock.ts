@@ -161,21 +161,36 @@ export class AudioClock {
     return this.perfStartTime + (audioDelta * 1000);
   }
 
-  scheduleAtAudioTime(callback: (audioTime: number) => void, audioTime: number): void {
+  scheduleAtAudioTime(callback: (audioTime: number) => void, audioTime: number): () => void {
     this.ensureContext();
     const nowAudio = this.audioContext!.currentTime;
     const delay = Math.max(0, audioTime - nowAudio);
     
     if (delay === 0) {
       callback(audioTime);
+      return () => {}; // No-op cancel function
     } else {
       const source = this.audioContext!.createBufferSource();
       source.buffer = this.audioContext!.createBuffer(1, 1, this.audioContext!.sampleRate);
       source.connect(this.audioContext!.destination);
       source.start(audioTime);
       source.stop(audioTime + 0.001);
+      
+      let cancelled = false;
       source.onended = () => {
-        callback(audioTime);
+        if (!cancelled) {
+          callback(audioTime);
+        }
+      };
+      
+      return () => {
+        cancelled = true;
+        try {
+          source.stop();
+          source.disconnect();
+        } catch {
+          // Source may have already ended or been stopped
+        }
       };
     }
   }

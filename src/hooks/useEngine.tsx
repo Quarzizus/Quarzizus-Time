@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useMetronomeAudio } from "./useMetronomeAudio";
-import {
-  useMetronomeWorker,
-  type MetronomeConfig,
-  type TickData,
-} from "./useMetronomeWorker";
+import { useMetronomeScheduler } from "./useMetronomeScheduler";
+import type { MetronomeConfig, TickData } from "./useMetronomeScheduler";
 import { metrics } from "../lib/metrics";
 
 const useEngine = (config: MetronomeConfig) => {
@@ -14,7 +11,7 @@ const useEngine = (config: MetronomeConfig) => {
   const [currentMeasure, setCurrentMeasure] = useState<number>(1);
 
   const { playSoundAtTargetTime } = useMetronomeAudio();
-  const { start, stop, update, onTick } = useMetronomeWorker();
+  const { start, stop, update, onTick } = useMetronomeScheduler();
 
   const prevConfig = useRef<MetronomeConfig>(config);
 
