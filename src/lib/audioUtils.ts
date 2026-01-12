@@ -1,21 +1,3 @@
-export class AudioContextManager {
-  private static context: AudioContext | null = null;
-
-  static getContext(): AudioContext {
-    if (!this.context) {
-      const AudioContextClass = window.AudioContext;
-      this.context = new AudioContextClass();
-    }
-    return this.context;
-  }
-
-  static async resume() {
-    if (this.context && this.context.state === "suspended") {
-      await this.context.resume();
-    }
-  }
-}
-
 export function createClickBuffer(
   context: AudioContext,
   frequency: number,

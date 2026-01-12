@@ -1,38 +1,31 @@
 import { useRef, useCallback, useEffect } from "react";
-import { AudioContextManager, createClickBuffer } from "../lib/audioUtils";
+import { createClickBuffer } from "../lib/audioUtils";
+import { audioClock } from "../lib/audioClock";
 
 export type SoundType = "accent" | "sub";
 
 interface UseMetronomeAudioReturn {
-  playSound: (type: SoundType, beat: number, delay?: number) => void;
-  resumeContext: () => Promise<void>;
+  playSoundAtTargetTime: (type: SoundType, beat: number, targetTime: number) => void;
 }
 
 const useMetronomeAudio = (): UseMetronomeAudioReturn => {
-  const audioContextRef = useRef<AudioContext | null>(null);
   const accentBufferRef = useRef<AudioBuffer | null>(null);
   const subBufferRef = useRef<AudioBuffer | null>(null);
 
   // Inicializar buffers de audio
   useEffect(() => {
     const initAudio = () => {
-      const ctx = AudioContextManager.getContext();
-      audioContextRef.current = ctx;
+      const ctx = audioClock.getContext();
       accentBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
       subBufferRef.current = createClickBuffer(ctx, 1200, 0.08);
     };
     initAudio();
   }, []);
 
-  const resumeContext = useCallback(async () => {
-    await AudioContextManager.resume();
-  }, []);
+  const playSoundAtTargetTime = useCallback((type: SoundType, _beat: number, targetTime: number) => {
+    const ctx = audioClock.getContext();
 
-  const playSound = useCallback((type: SoundType, _beat: number, delay: number = 0) => {
-    const ctx = audioContextRef.current;
-    if (!ctx) return;
-
-    // Asegurar que el contexto esté activo (requerido en navegadores modernos)
+    // Asegurar que el contexto esté activo
     if (ctx.state === "suspended") {
       ctx.resume();
     }
@@ -42,6 +35,23 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
 
     if (!buffer) return;
 
+    // Convertir targetTime (performance.now) a tiempo de audio
+    const audioTime = audioClock.getAudioTime(targetTime);
+    
+    // Si el tiempo de audio ya pasó (más de 50ms en el pasado), reproducir inmediatamente
+    const nowAudio = ctx.currentTime;
+    if (audioTime < nowAudio - 0.05) {
+      // Demasiado tarde, reproducir ahora
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.value = type === "accent" ? 0.8 : 0.3;
+      source.connect(gain);
+      gain.connect(ctx.destination);
+      source.start(nowAudio);
+      return;
+    }
+
     const source = ctx.createBufferSource();
     source.buffer = buffer;
 
@@ -50,12 +60,11 @@ const useMetronomeAudio = (): UseMetronomeAudioReturn => {
 
     source.connect(gain);
     gain.connect(ctx.destination);
-    source.start(ctx.currentTime + delay);
+    source.start(audioTime);
   }, []);
 
   return {
-    playSound,
-    resumeContext,
+    playSoundAtTargetTime,
   };
 };
 

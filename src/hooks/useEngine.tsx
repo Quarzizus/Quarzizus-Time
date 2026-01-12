@@ -12,7 +12,7 @@ const useEngine = (config: MetronomeConfig) => {
   const [currentBeat, setCurrentBeat] = useState<number>(0);
   const [currentMeasure, setCurrentMeasure] = useState<number>(1);
 
-  const { playSound } = useMetronomeAudio();
+  const { playSoundAtTargetTime } = useMetronomeAudio();
   const { start, stop, update, onTick } = useMetronomeWorker();
 
   const prevConfig = useRef<MetronomeConfig>(config);
@@ -25,11 +25,7 @@ const useEngine = (config: MetronomeConfig) => {
           data.measuresOn;
 
       if (shouldPlay) {
-        const now = performance.now();
-        const latency = now - data.targetTime;
-        const audioLatency = Math.max(0, 0.05 - latency / 1000);
-        
-        playSound(data.soundType, data.beat, audioLatency);
+        playSoundAtTargetTime(data.soundType, data.beat, data.targetTime);
         setIsGap(false);
       } else {
         setIsGap(true);
@@ -38,7 +34,7 @@ const useEngine = (config: MetronomeConfig) => {
       setCurrentBeat(data.beat);
       setCurrentMeasure(data.measureCount);
     },
-    [playSound],
+    [playSoundAtTargetTime],
   );
 
   useEffect(() => {
