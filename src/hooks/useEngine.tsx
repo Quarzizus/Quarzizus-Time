@@ -9,6 +9,8 @@ const useEngine = (config: MetronomeConfig) => {
   const [isGap, setIsGap] = useState<boolean>(false);
   const [currentBeat, setCurrentBeat] = useState<number>(0);
   const [currentMeasure, setCurrentMeasure] = useState<number>(1);
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
+  const [showNotification, setShowNotification] = useState<boolean>(false);
 
   const { playSoundAtTargetTime } = useMetronomeAudio();
   const { start, stop, update, onTick } = useMetronomeScheduler();
@@ -53,10 +55,35 @@ const useEngine = (config: MetronomeConfig) => {
       config.gapEnabled !== prevConfig.current.gapEnabled;
 
     if (hasUpdates) {
-      update(config);
+      if (isRunning) {
+        // Pausar automáticamente cuando hay cambios mientras corre
+        stop();
+        metrics.recordWorkerStop();
+        
+        // Usar setTimeout para evitar cascading renders
+        const timer = setTimeout(() => {
+          setIsRunning(false);
+          setCurrentBeat(0);
+          setCurrentMeasure(1);
+          setIsGap(false);
+          setNotificationMessage("Cambia la configuración y dale play ⚡");
+          setShowNotification(true);
+          
+          // Auto-ocultar notificación después de 2 segundos
+          setTimeout(() => {
+            setShowNotification(false);
+            setNotificationMessage(null);
+          }, 2000);
+        }, 0);
+        
+        return () => clearTimeout(timer);
+      } else {
+        // Si ya está pausado, solo actualizar silenciosamente
+        update(config);
+      }
       prevConfig.current = config;
     }
-  }, [config, update]);
+  }, [config, update, isRunning, stop]);
 
   const onPlay = useCallback(() => {
     metrics.recordWorkerStart(config);
@@ -79,11 +106,19 @@ const useEngine = (config: MetronomeConfig) => {
     setIsGap(false);
   }, [stop]);
 
+  const clearNotification = useCallback(() => {
+    setShowNotification(false);
+    setNotificationMessage(null);
+  }, []);
+
   return {
     currentBeat,
     currentMeasure,
     isRunning,
     isGap,
+    notificationMessage,
+    showNotification,
+    clearNotification,
     onPlay,
     onStop,
     onReset,

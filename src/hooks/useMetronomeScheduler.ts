@@ -144,8 +144,28 @@ const useMetronomeScheduler = () => {
     const nowAudio = audioClock.getCurrentAudioTime();
     const delay = targetAudioTime - nowAudio;
 
+    // If the target time is significantly in the past (more than one interval),
+    // skip missed ticks to avoid recursion
+    if (delay < -state.interval / 1000) {
+      const ticksToSkip = Math.floor(-delay * 1000 / state.interval);
+      state.tickCount += ticksToSkip;
+      
+      // Recalculate target time with skipped ticks
+      const newTargetAudioTime = state.startTime + (state.tickCount * state.interval) / 1000;
+      const newDelay = newTargetAudioTime - nowAudio;
+      
+      if (newDelay <= 0.001) {
+        processTick(newTargetAudioTime);
+      } else {
+        const cancel = audioClock.scheduleAtAudioTime((audioTime) => {
+          cancelScheduleRef.current = null;
+          processTick(audioTime);
+        }, newTargetAudioTime);
+        cancelScheduleRef.current = cancel;
+      }
+    }
     // If the target time is in the past or very near (within 1ms), execute immediately
-    if (delay <= 0.001) {
+    else if (delay <= 0.001) {
       processTick(targetAudioTime);
     } else {
       // Schedule via audio clock with cancellation support
@@ -205,29 +225,21 @@ const useMetronomeScheduler = () => {
 
   const update = useCallback((config: MetronomeConfig) => {
     const state = stateRef.current;
-    const wasRunning = state.running;
-
-    // Update configuration
-    state.bpm = config.bpm;
-    state.measure = config.measure;
-    state.subdivision = config.subdivision;
-    state.measuresOn = config.measuresOn;
-    state.measuresOff = config.measuresOff;
-    state.gapEnabled = config.gapEnabled;
-    state.interval = calculateInterval(config.bpm, config.subdivision);
-    state.totalTicks = calculateTotalTicks(config.measure, config.subdivision);
-
-    // If running, reschedule with new interval
-    if (wasRunning) {
-      // Cancel any pending tick
-      if (cancelScheduleRef.current) {
-        cancelScheduleRef.current();
-        cancelScheduleRef.current = null;
-      }
-      // Reschedule next tick with updated interval
-      scheduleNextTick();
+    
+    // Only update configuration when NOT running
+    // When running, useEngine will stop the metronome first
+    if (!state.running) {
+      state.bpm = config.bpm;
+      state.measure = config.measure;
+      state.subdivision = config.subdivision;
+      state.measuresOn = config.measuresOn;
+      state.measuresOff = config.measuresOff;
+      state.gapEnabled = config.gapEnabled;
+      state.interval = calculateInterval(config.bpm, config.subdivision);
+      state.totalTicks = calculateTotalTicks(config.measure, config.subdivision);
     }
-  }, [scheduleNextTick]);
+    // If running, do nothing - the metronome will be stopped by useEngine
+  }, []);
 
   const onTick = useCallback((callback: TickCallback) => {
     tickCallbackRef.current = callback;

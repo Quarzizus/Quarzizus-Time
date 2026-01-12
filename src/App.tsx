@@ -14,6 +14,7 @@ import { useGap } from "./hooks/useGap";
 import { Download } from "lucide-react";
 import { usePWAInstall } from "./hooksOld/usePWAInstall";
 import { MetricsPanel } from "./components/MetricsPanel/MetricsPanel";
+import { Notification } from "./components/Notification/Notification";
 
 function App() {
   const { install, isInstallable } = usePWAInstall();
@@ -41,7 +42,7 @@ function App() {
           <p className="text-muted-foreground text-sm font-medium">
             Metrónomo profesional
           </p>
-          <p className="text-muted-foreground text-xs font-medium">V.0.0.4</p>
+          <p className="text-muted-foreground text-xs font-medium">V.0.0.5</p>
           {isInstallable && (
             <button
               onClick={install}
@@ -78,6 +79,15 @@ function App() {
         </div>
       </main>
       <MetricsPanel />
+
+      {/* Notification for configuration changes */}
+      {engine.showNotification && engine.notificationMessage && (
+        <Notification
+          message={engine.notificationMessage}
+          duration={2000}
+          onClose={engine.clearNotification}
+        />
+      )}
     </div>
   );
 }
