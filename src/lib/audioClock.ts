@@ -1,3 +1,5 @@
+import { metrics } from "./metrics";
+
 export class AudioClock {
   private static instance: AudioClock | null = null;
   private audioContext: AudioContext | null = null;
@@ -83,15 +85,21 @@ export class AudioClock {
 
   async resume(): Promise<void> {
     this.ensureContext();
-    if (this.audioContext!.state === 'suspended') {
+    const previousState = this.audioContext!.state;
+    if (previousState === 'suspended') {
       await this.audioContext!.resume();
+      metrics.recordAudioStateChange(this.audioContext!.state, previousState);
+      metrics.recordContextResume();
     }
   }
 
   suspend(): void {
     this.ensureContext();
-    if (this.audioContext!.state === 'running') {
+    const previousState = this.audioContext!.state;
+    if (previousState === 'running') {
       this.audioContext!.suspend();
+      metrics.recordAudioStateChange(this.audioContext!.state, previousState);
+      metrics.recordContextSuspend();
     }
   }
 
@@ -100,6 +108,9 @@ export class AudioClock {
     this.audioStartTime = this.audioContext!.currentTime;
     this.perfStartTime = performance.now();
     this.isSynchronized = true;
+    
+    const driftMs = this.audioStartTime * 1000 - this.perfStartTime;
+    metrics.recordClockDrift(driftMs, this.audioStartTime, this.perfStartTime);
   }
 
   getAudioTime(perfTime: number = performance.now()): number {

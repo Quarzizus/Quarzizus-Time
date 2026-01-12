@@ -5,6 +5,7 @@ import {
   type MetronomeConfig,
   type TickData,
 } from "./useMetronomeWorker";
+import { metrics } from "../lib/metrics";
 
 const useEngine = (config: MetronomeConfig) => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
@@ -24,6 +25,10 @@ const useEngine = (config: MetronomeConfig) => {
         data.measureCount % (data.measuresOn + data.measuresOff) <
           data.measuresOn;
 
+      // Registrar error de timing del worker
+      const errorMs = data.timestamp - data.targetTime;
+      metrics.recordTickError(errorMs, data.targetTime, data.timestamp, 60000 / config.bpm / config.subdivision);
+
       if (shouldPlay) {
         playSoundAtTargetTime(data.soundType, data.beat, data.targetTime);
         setIsGap(false);
@@ -34,7 +39,7 @@ const useEngine = (config: MetronomeConfig) => {
       setCurrentBeat(data.beat);
       setCurrentMeasure(data.measureCount);
     },
-    [playSoundAtTargetTime],
+    [playSoundAtTargetTime, config.bpm, config.subdivision],
   );
 
   useEffect(() => {
@@ -57,17 +62,20 @@ const useEngine = (config: MetronomeConfig) => {
   }, [config, update]);
 
   const onPlay = useCallback(() => {
+    metrics.recordWorkerStart(config);
     start(config);
     setIsRunning(true);
   }, [config, start]);
 
   const onStop = useCallback(() => {
     stop();
+    metrics.recordWorkerStop();
     setIsRunning(false);
   }, [stop]);
 
   const onReset = useCallback(() => {
     stop();
+    metrics.recordWorkerStop();
     setIsRunning(false);
     setCurrentBeat(0);
     setCurrentMeasure(1);

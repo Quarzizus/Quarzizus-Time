@@ -13,6 +13,7 @@ import { GapConfig } from "./components/GapConfig/GapConfig";
 import { useGap } from "./hooks/useGap";
 import { Download } from "lucide-react";
 import { usePWAInstall } from "./hooksOld/usePWAInstall";
+import { MetricsPanel } from "./components/MetricsPanel/MetricsPanel";
 
 function App() {
   const { install, isInstallable } = usePWAInstall();
@@ -40,7 +41,7 @@ function App() {
           <p className="text-muted-foreground text-sm font-medium">
             Metrónomo profesional
           </p>
-          <p className="text-muted-foreground text-xs font-medium">V.0.0.1</p>
+          <p className="text-muted-foreground text-xs font-medium">V.0.0.2</p>
           {isInstallable && (
             <button
               onClick={install}
@@ -76,6 +77,7 @@ function App() {
           <Transport {...engine} />
         </div>
       </main>
+      <MetricsPanel />
     </div>
   );
 }
